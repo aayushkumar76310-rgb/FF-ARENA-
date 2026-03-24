@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FF Arena — Admin Panel</title>
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0A0A;--side:#111111;--card:#161616;--card2:#1E1E1E;--border:#2A2A2A;--orange:#FF4D00;--orange2:#FF8C00;--yellow:#FFD600;--green:#00E676;--blue:#2979FF;--red:#FF1744;--text:#FFFFFF;--muted:#555555;--r:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{width:230px;flex-shrink:0;background:var(--side);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10;overflow-y:auto}
+.s-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
+.s-logo-text{font-family:'Baloo 2',cursive;font-size:28px;font-weight:800;letter-spacing:1px}
+.s-logo-text .ff{color:var(--orange)}
+.s-badge{display:inline-block;background:linear-gradient(135deg,var(--red),var(--orange));border-radius:8px;padding:3px 10px;font-size:11px;font-weight:800;color:#fff;letter-spacing:1px;margin-top:4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 20px;color:var(--muted);font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;border-left:3px solid transparent;letter-spacing:.3px}
+.nav-item:hover{color:var(--text);background:rgba(255,77,0,0.05)}
+.nav-item.active{color:var(--orange);background:rgba(255,77,0,0.08);border-left-color:var(--orange)}
+.nav-icon{font-size:19px;width:22px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--red);border-radius:10px;padding:2px 8px;font-size:11px;font-weight:800;color:#fff}
+.s-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
+.s-admin-name{font-weight:800;font-size:14px;margin-bottom:2px}
+.s-admin-email{font-size:12px;color:var(--muted)}
+.btn-so{width:100%;background:rgba(255,23,68,0.08);border:1px solid rgba(255,23,68,0.2);border-radius:10px;color:var(--red);font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;padding:10px;cursor:pointer;margin-top:10px;transition:background .2s}
+.btn-so:hover{background:rgba(255,23,68,0.15)}
+
+/* MAIN */
+.main{flex:1;margin-left:230px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{padding:16px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(10,10,10,0.98);position:sticky;top:0;z-index:5;backdrop-filter:blur(20px)}
+.page-title{font-family:'Baloo 2',cursive;font-size:26px;font-weight:800}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.btn-sm{padding:9px 18px;border-radius:10px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;cursor:pointer;border:none;transition:all .15s;letter-spacing:.3px}
+.btn-primary{background:linear-gradient(135deg,var(--red),var(--orange));color:#fff;box-shadow:0 4px 15px rgba(255,77,0,0.25)}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--orange);color:var(--orange)}
+.content{padding:24px 28px;flex:1}
+
+/* AUTH */
+#admin-auth{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.auth-wrap{text-align:center}
+.auth-logo{font-family:'Baloo 2',cursive;font-size:44px;font-weight:800;margin-bottom:6px}
+.auth-logo .ff{color:var(--orange)}
+.auth-sub-text{font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:32px}
+.auth-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px 28px;width:380px;text-align:left}
+.auth-head{font-family:'Baloo 2',cursive;font-size:22px;font-weight:800;margin-bottom:4px}
+.auth-s{font-size:13px;color:var(--muted);margin-bottom:22px}
+.inp{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;color:var(--text);font-family:'Nunito',sans-serif;font-size:15px;outline:none;margin-bottom:12px;transition:border-color .2s}
+.inp:focus{border-color:var(--orange)}
+.inp::placeholder{color:var(--muted)}
+.btn-login{width:100%;background:linear-gradient(135deg,var(--red),var(--orange));border:none;border-radius:12px;color:#fff;font-family:'Baloo 2',cursive;font-size:20px;font-weight:700;padding:15px;cursor:pointer;letter-spacing:.5px;box-shadow:0 8px 24px rgba(255,77,0,0.3);transition:all .2s}
+.btn-login:hover{transform:translateY(-2px)}
+.auth-note{font-size:12px;color:var(--muted);text-align:center;margin-top:10px}
+.auth-err{color:var(--red);font-size:13px;margin-bottom:10px;display:none;background:rgba(255,23,68,0.08);border:1px solid rgba(255,23,68,0.2);border-radius:8px;padding:10px 14px}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;position:relative;overflow:hidden;transition:border-color .2s}
+.stat-card:hover{border-color:rgba(255,77,0,0.3)}
+.stat-card::before{content:attr(data-icon);position:absolute;right:14px;top:14px;font-size:30px;opacity:.15}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:700}
+.stat-value{font-family:'Baloo 2',cursive;font-size:34px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-change{font-size:12px;color:var(--green);font-weight:700}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:20px}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Baloo 2',cursive;font-size:19px;font-weight:800}
+
+/* TABLE */
+.table{width:100%;border-collapse:collapse}
+.table th{background:rgba(0,0,0,.4);padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);font-weight:800;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap}
+.table td{padding:13px 16px;border-bottom:1px solid rgba(42,42,42,.7);font-size:14px;vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(255,77,0,0.02)}
+
+/* BADGES */
+.badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.b-live{background:rgba(255,23,68,.12);color:#ff4d6d;border:1px solid rgba(255,23,68,.25)}
+.b-open{background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.2)}
+.b-upcoming{background:rgba(41,121,255,.1);color:#82b1ff;border:1px solid rgba(41,121,255,.2)}
+.b-ended{background:rgba(85,85,85,.12);color:#555;border:1px solid rgba(85,85,85,.2)}
+.b-confirmed{background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.2)}
+.b-pending{background:rgba(255,214,0,.1);color:#FFD600;border:1px solid rgba(255,214,0,.2)}
+.b-approved{background:rgba(0,230,118,.1);color:#00e676;border:1px solid rgba(0,230,118,.2)}
+
+/* ACTION BUTTONS */
+.ab{padding:6px 14px;border-radius:8px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;border:none;transition:all .15s;margin-right:4px}
+.ab-edit{background:rgba(41,121,255,.1);border:1px solid rgba(41,121,255,.2);color:#82b1ff}
+.ab-del{background:rgba(255,23,68,.1);border:1px solid rgba(255,23,68,.2);color:var(--red)}
+.ab-view{background:rgba(255,77,0,.1);border:1px solid rgba(255,77,0,.2);color:var(--orange)}
+.ab-approve{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.2);color:var(--green)}
+.ab-reject{background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.15);color:var(--red)}
+
+/* FORM */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:20px}
+.form-card-title{font-family:'Baloo 2',cursive;font-size:20px;font-weight:800;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.fg{margin-bottom:0}
+.fg.full{grid-column:1/-1}
+.flbl{display:block;font-size:12px;color:var(--muted);font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.finp,.fsel,.fta{width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;outline:none;transition:border-color .2s;appearance:none}
+.finp:focus,.fsel:focus,.fta:focus{border-color:var(--orange)}
+.finp::placeholder,.fta::placeholder{color:var(--muted)}
+.fta{resize:vertical;min-height:80px}
+.btn-create{padding:12px 28px;border-radius:10px;background:linear-gradient(135deg,var(--red),var(--orange));border:none;color:#fff;font-family:'Baloo 2',cursive;font-size:18px;font-weight:700;cursor:pointer;letter-spacing:.5px;box-shadow:0 6px 20px rgba(255,77,0,0.25);transition:all .2s}
+.btn-create:hover{transform:translateY(-1px)}
+
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:10px 20px;background:none;border:none;color:var(--muted);font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px}
+.tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:50;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bg.show{display:flex}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px;width:90%;max-width:480px;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Baloo 2',cursive;font-size:22px;font-weight:800;margin-bottom:16px}
+.modal-close{float:right;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all .2s}
+.modal-close:hover{background:rgba(255,77,0,.1);color:var(--orange)}
+
+/* PENDING PAYMENT CARD */
+.pp-card{background:var(--card2);border:1px solid rgba(255,214,0,0.2);border-radius:12px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.pp-info .pp-name{font-weight:800;font-size:14px;margin-bottom:2px}
+.pp-info .pp-meta{font-size:12px;color:var(--muted)}
+.pp-amt{font-family:'Baloo 2',cursive;font-size:20px;font-weight:800;color:var(--yellow);white-space:nowrap}
+.pp-actions{display:flex;gap:6px}
+
+/* TOAST */
+.toast{position:fixed;top:20px;right:20px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:14px;font-weight:800;z-index:999;opacity:0;transform:translateY(-10px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* EMPTY */
+.empty{text-align:center;padding:48px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:10px}
+
+/* TOGGLE */
+.tog-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.tog-row:last-child{border-bottom:none}
+.tog-lbl{font-size:14px;font-weight:700}
+.tog{width:46px;height:26px;background:var(--border);border-radius:13px;position:relative;cursor:pointer;transition:background .2s;border:none}
+.tog.on{background:var(--orange)}
+.tog::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.tog.on::after{transform:translateX(20px)}
+
+/* OVERVIEW CARDS */
+.ov-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.ov-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;transition:border-color .2s}
+.ov-card:hover{border-color:rgba(255,77,0,0.3)}
+.ov-title{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+
+.search-inp{background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;outline:none;transition:border-color .2s;max-width:280px}
+.search-inp:focus{border-color:var(--orange)}
+.search-inp::placeholder{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="admin-auth">
+  <div class="auth-wrap">
+    <div class="auth-logo"><span class="ff">FF</span> ARENA</div>
+    <div class="auth-sub-text">Admin Panel — Sirf Admin Access</div>
+    <div class="auth-box">
+      <div class="auth-head">Admin Login 👑</div>
+      <div class="auth-s">Authorized access only</div>
+      <div class="auth-err" id="auth-err"></div>
+      <input class="inp" id="adm-email" type="email" placeholder="Admin Email">
+      <input class="inp" id="adm-pass" type="password" placeholder="Password">
+      <button class="btn-login" onclick="adminLogin()">ADMIN LOGIN</button>
+      <div class="auth-note">⚠️ Sirf authorized admin hi login kar sakte hain</div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar" style="display:none">
+  <div class="s-logo">
+    <div class="s-logo-text"><span class="ff">FF</span> ARENA</div>
+    <div class="s-badge">ADMIN</div>
+  </div>
+  <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span> Dashboard</div>
+  <div class="nav-item" onclick="showPage('tournaments',this)"><span class="nav-icon">🏆</span> Tournaments</div>
+  <div class="nav-item" onclick="showPage('create',this)"><span class="nav-icon">➕</span> Create Tournament</div>
+  <div class="nav-item" onclick="showPage('registrations',this)"><span class="nav-icon">📋</span> Registrations</div>
+  <div class="nav-item" onclick="showPage('payments',this)"><span class="nav-icon">💳</span> Payments <span class="nav-badge" id="pending-badge" style="display:none">0</span></div>
+  <div class="nav-item" onclick="showPage('users',this)"><span class="nav-icon">👥</span> Users</div>
+  <div class="nav-item" onclick="showPage('withdrawals',this)"><span class="nav-icon">💸</span> Withdrawals</div>
+  <div class="nav-item" onclick="showPage('winners',this)"><span class="nav-icon">🥇</span> Winners</div>
+  <div class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span> Settings</div>
+  <div class="s-footer">
+    <div class="s-admin-name" id="s-admin-name">Admin</div>
+    <div class="s-admin-email" id="s-admin-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4021242d292e0026262132252e216e232f2d">[email&#160;protected]</a></div>
+    <button class="btn-so" onclick="adminLogout()">🚪 Logout</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main-content" style="display:none">
+  <div class="topbar">
+    <div class="page-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <button class="btn-sm btn-outline" onclick="refreshAll()">🔄 Refresh</button>
+      <button class="btn-sm btn-primary" onclick="showPage('create',null)">➕ New Tournament</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard" class="page active">
+      <div class="stats-grid">
+        <div class="stat-card" data-icon="🏆"><div class="stat-label">Total Tournaments</div><div class="stat-value" style="color:var(--orange)" id="ds-t">0</div><div class="stat-change">↑ All time</div></div>
+        <div class="stat-card" data-icon="👥"><div class="stat-label">Total Users</div><div class="stat-value" style="color:var(--blue)" id="ds-u">0</div><div class="stat-change">↑ Registered</div></div>
+        <div class="stat-card" data-icon="📋"><div class="stat-label">Registrations</div><div class="stat-value" style="color:var(--green)" id="ds-r">0</div><div class="stat-change">↑ All time</div></div>
+        <div class="stat-card" data-icon="💰"><div class="stat-label">Total Revenue</div><div class="stat-value" style="color:var(--yellow)" id="ds-rev">₹0</div><div class="stat-change">Entry fees collected</div></div>
+      </div>
+
+      <!-- PENDING PAYMENTS -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">⚠️ Pending Payment Verifications</div><button class="btn-sm btn-outline" onclick="showPage('payments',null)">Sab Dekho</button></div>
+        <div id="dash-pp" style="padding:16px"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Tournaments</div></div>
+          <table class="table">
+            <thead><tr><th>Tournament</th><th>Status</th><th>Teams</th></tr></thead>
+            <tbody id="dash-t-body"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Registrations</div></div>
+          <table class="table">
+            <thead><tr><th>Player</th><th>Tournament</th><th>Fee</th></tr></thead>
+            <tbody id="dash-r-body"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOURNAMENTS -->
+    <div id="pg-tournaments" class="page">
+      <div class="tabs">
+        <button class="tab active" onclick="tFilter(this,'all')">Sab</button>
+        <button class="tab" onclick="tFilter(this,'live')">🔴 Live</button>
+        <button class="tab" onclick="tFilter(this,'open')">✅ Open</button>
+        <button class="tab" onclick="tFilter(this,'upcoming')">⏰ Upcoming</button>
+        <button class="tab" onclick="tFilter(this,'ended')">🏁 Ended</button>
+      </div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Prize</th><th>Entry</th><th>Teams</th><th>Date</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="t-tbody"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CREATE -->
+    <div id="pg-create" class="page">
+      <div class="form-card">
+        <div class="form-card-title">🏆 Naya Tournament Banao</div>
+        <div class="form-grid">
+          <div class="fg full"><label class="flbl">Tournament Title *</label><input class="finp" id="c-title" placeholder="e.g. Free Fire Grand Prix Season 5"></div>
+          <div class="fg"><label class="flbl">Game Type</label><select class="fsel" id="c-type"><option>Solo</option><option>Duo</option><option selected>Squad</option></select></div>
+          <div class="fg"><label class="flbl">Status</label><select class="fsel" id="c-status"><option value="upcoming">Upcoming</option><option value="open">Open (Registration)</option><option value="live">Live</option></select></div>
+          <div class="fg"><label class="flbl">Prize Pool (₹) *</label><input class="finp" id="c-prize" type="number" placeholder="25000"></div>
+          <div class="fg"><label class="flbl">Entry Fee (₹, 0 = Free)</label><input class="finp" id="c-fee" type="number" placeholder="50" value="0"></div>
+          <div class="fg"><label class="flbl">Max Teams *</label><input class="finp" id="c-maxteams" type="number" placeholder="32"></div>
+          <div class="fg"><label class="flbl">Date & Time *</label><input class="finp" id="c-date" type="datetime-local"></div>
+          <div class="fg"><label class="flbl">Prize Distribution</label><select class="fsel" id="c-dist"><option>1st:50%, 2nd:30%, 3rd:20%</option><option>1st:60%, 2nd:25%, 3rd:15%</option><option>1st:70%, 2nd:30%</option></select></div>
+          <div class="fg"><label class="flbl">Room ID (match ke baad)</label><input class="finp" id="c-roomid" placeholder="FF Room ID"></div>
+          <div class="fg"><label class="flbl">Room Password</label><input class="finp" id="c-roompass" placeholder="Room Password"></div>
+          <div class="fg"><label class="flbl">Per Kill Prize (₹)</label><input class="finp" id="c-kill" type="number" placeholder="0" value="0"></div>
+          <div class="fg full"><label class="flbl">Rules / Description</label><textarea class="fta" id="c-rules" placeholder="Tournament rules, format, etc."></textarea></div>
+        </div>
+        <button class="btn-create" onclick="createTournament()">🏆 TOURNAMENT BANAO</button>
+      </div>
+    </div>
+
+    <!-- REGISTRATIONS -->
+    <div id="pg-registrations" class="page">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        <input class="search-inp" id="reg-search" placeholder="🔍 Team, player, UID search karo..." oninput="searchRegs()">
+        <select class="finp" id="reg-filter-t" style="max-width:220px" onchange="loadRegistrations()"><option value="">Sab Tournaments</option></select>
+      </div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>#</th><th>Team</th><th>Player</th><th>FF UID</th><th>Tournament</th><th>Type</th><th>Fee</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="reg-tbody"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAYMENTS / PENDING -->
+    <div id="pg-payments" class="page">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-card" data-icon="💰"><div class="stat-label">Total Collected</div><div class="stat-value" style="color:var(--green);font-size:28px" id="pay-total">₹0</div></div>
+        <div class="stat-card" data-icon="⏳"><div class="stat-label">Pending Verify</div><div class="stat-value" style="color:var(--yellow);font-size:28px" id="pay-pending">0</div></div>
+        <div class="stat-card" data-icon="✅"><div class="stat-label">Approved</div><div class="stat-value" style="color:var(--blue);font-size:28px" id="pay-approved">0</div></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><div class="card-title">⏳ Pending Payment Verification</div></div>
+        <div id="pending-payments-list" style="padding:16px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Transaction History</div></div>
+        <table class="table">
+          <thead><tr><th>#</th><th>User</th><th>Type</th><th>Amount</th><th>Description</th><th>Date</th></tr></thead>
+          <tbody id="pay-tbody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="pg-users" class="page">
+      <div style="margin-bottom:14px"><input class="search-inp" id="user-search" placeholder="🔍 User search karo..." oninput="searchUsers()"></div>
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>#</th><th>Naam</th><th>Email</th><th>Phone</th><th>FF UID</th><th>Wallet</th><th>Tournaments</th><th>Action</th></tr></thead>
+          <tbody id="user-tbody"><tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WITHDRAWALS -->
+    <div id="pg-withdrawals" class="page">
+      <div class="card">
+        <table class="table">
+          <thead><tr><th>#</th><th>User ID</th><th>UPI ID</th><th>Amount</th><th>Status</th><th>Date</th><th>Action</th></tr></thead>
+          <tbody id="w-tbody"><tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WINNERS -->
+    <div id="pg-winners" class="page">
+      <div class="form-card" style="margin-bottom:20px">
+        <div class="form-card-title">🥇 Winner Declare Karo & Prize Do</div>
+        <div class="form-grid">
+          <div class="fg"><label class="flbl">Tournament Select *</label><select class="fsel" id="w-tournament"></select></div>
+          <div class="fg"><label class="flbl">1st Place Team *</label><input class="finp" id="w-1st" placeholder="Winner team naam"></div>
+          <div class="fg"><label class="flbl">2nd Place Team</label><input class="finp" id="w-2nd" placeholder="Runner-up"></div>
+          <div class="fg"><label class="flbl">3rd Place Team</label><input class="finp" id="w-3rd" placeholder="3rd place"></div>
+          <div class="fg"><label class="flbl">Winner FF UID</label><input class="finp" id="w-uid1" placeholder="Winner FF UID"></div>
+          <div class="fg"><label class="flbl">Prize Amount (₹) *</label><input class="finp" id="w-prize-amt" type="number" placeholder="Prize amount"></div>
+        </div>
+        <button class="btn-create" onclick="declareWinner()">🏆 WINNER DECLARE KARO</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Past Winners</div></div>
+        <table class="table">
+          <thead><tr><th>Tournament</th><th>1st Place</th><th>2nd Place</th><th>3rd Place</th><th>Prize</th><th>Date</th></tr></thead>
+          <tbody id="winners-tbody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Koi winner nahi</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="pg-settings" class="page">
+      <div class="form-card">
+        <div class="form-card-title">⚙️ App Settings</div>
+        <div class="tog-row"><span class="tog-lbl">🔧 Maintenance Mode</span><button class="tog" id="tog-m" onclick="this.classList.toggle('on');showToast('Setting updated')"></button></div>
+        <div class="tog-row"><span class="tog-lbl">💰 UPI Payments Allow</span><button class="tog on" id="tog-p" onclick="this.classList.toggle('on');showToast('Setting updated')"></button></div>
+        <div class="tog-row"><span class="tog-lbl">💸 Withdrawals Allow</span><button class="tog on" id="tog-w" onclick="this.classList.toggle('on');showToast('Setting updated')"></button></div>
+        <div class="tog-row"><span class="tog-lbl">📧 Email Notifications</span><button class="tog on" id="tog-e" onclick="this.classList.toggle('on');showToast('Setting updated')"></button></div>
+      </div>
+      <div class="form-card">
+        <div class="form-card-title">💳 UPI Settings</div>
+        <div class="fg" style="margin-bottom:14px"><label class="flbl">UPI ID</label><input class="finp" value="7255875441@pthdfc" id="set-upi"></div>
+        <div class="fg" style="margin-bottom:14px"><label class="flbl">UPI Name</label><input class="finp" value="FF Arena" id="set-upi-name"></div>
+        <div class="fg" style="margin-bottom:14px"><label class="flbl">Admin Email (Whitelist)</label><input class="finp" value="krishkumar62060@gmail.com" id="set-admin-email"></div>
+        <button class="btn-create" onclick="showToast('✅ Settings saved!')">💾 SAVE KARO</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT TOURNAMENT MODAL -->
+<div class="modal-bg" id="edit-modal" onclick="closeModal(event,'edit-modal')">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title">✏️ Tournament Edit Karo</div>
+      <button class="modal-close" onclick="closeModalById('edit-modal')">✕</button>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label class="flbl">Status</label><select class="fsel" id="e-status"><option value="upcoming">Upcoming</option><option value="open">Open</option><option value="live">Live</option><option value="ended">Ended</option></select></div>
+    <div class="fg" style="margin-bottom:12px"><label class="flbl">Room ID</label><input class="finp" id="e-roomid" placeholder="Room ID"></div>
+    <div class="fg" style="margin-bottom:12px"><label class="flbl">Room Password</label><input class="finp" id="e-roompass" placeholder="Room Password"></div>
+    <div class="fg" style="margin-bottom:12px"><label class="flbl">Date</label><input class="finp" id="e-date" type="datetime-local"></div>
+    <button class="btn-create" style="width:100%;margin-top:8px;font-size:16px" onclick="saveEdit()">💾 SAVE KARO</button>
+  </div>
+</div>
+
+<!-- USER MODAL -->
+<div class="modal-bg" id="user-modal" onclick="closeModal(event,'user-modal')">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="modal-title" id="um-title">User Details</div>
+      <button class="modal-close" onclick="closeModalById('user-modal')">✕</button>
+    </div>
+    <div id="um-content"></div>
+    <div style="margin-top:16px">
+      <label class="flbl">Wallet Adjust (₹, negative = deduct)</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input class="finp" id="um-amt" type="number" placeholder="Amount">
+        <button class="btn-create" style="flex-shrink:0;padding:12px 16px;font-size:15px" onclick="adjustWallet()">APPLY</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script></script><script>
+// ===== FIREBASE CONFIG =====
+const firebaseConfig = {
+  apiKey: "AIzaSyA6yetig0lWYXJiL2-Xt_ZU48fBGZUYiKk",
+  authDomain: "ff-tournament-6bd35.firebaseapp.com",
+  databaseURL: "https://ff-tournament-6bd35-default-rtdb.firebaseio.com",
+  projectId: "ff-tournament-6bd35",
+  storageBucket: "ff-tournament-6bd35.firebasestorage.app",
+  messagingSenderId: "298133117467",
+  appId: "1:298133117467:web:18e95e78821c76e75276be"
+};
+
+// ===== ADMIN WHITELIST =====
+const ADMIN_EMAILS = ['krishkumar62060@gmail.com'];
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let allT=[], allRegs=[], allUsers=[], allPay=[], allWith=[], pendingPay=[];
+let editingTId=null, editingUId=null;
+
+// ===== AUTH =====
+auth.onAuthStateChanged(user=>{
+  if(user && ADMIN_EMAILS.includes(user.email)){
+    document.getElementById('admin-auth').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.getElementById('main-content').style.display='flex';
+    document.getElementById('s-admin-name').textContent=user.displayName||'Admin';
+    document.getElementById('s-admin-email').textContent=user.email;
+    loadAll();
+  } else if(user){
+    auth.signOut();
+    showErr('Is email ko admin access nahi hai!');
+  }
+});
+
+async function adminLogin(){
+  const email=document.getElementById('adm-email').value.trim();
+  const pass=document.getElementById('adm-pass').value;
+  document.getElementById('auth-err').style.display='none';
+  if(!ADMIN_EMAILS.includes(email)){showErr('Is email ko admin access nahi hai!');return;}
+  try{await auth.signInWithEmailAndPassword(email,pass);}
+  catch(e){const m={'auth/wrong-password':'Galat password','auth/user-not-found':'Account nahi mila'};showErr(m[e.code]||e.message);}
+}
+function showErr(msg){const el=document.getElementById('auth-err');el.textContent=msg;el.style.display='block';}
+function adminLogout(){auth.signOut();}
+
+// ===== LOAD ALL =====
+async function loadAll(){
+  await Promise.all([loadTournaments(),loadRegistrations(),loadUsers(),loadPayments(),loadWithdrawals(),loadPendingPayments()]);
+  loadDashboard();
+}
+
+async function loadTournaments(){
+  try{
+    const snap=await db.collection('tournaments').orderBy('created_at','desc').get();
+    allT=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!allT.length)allT=demoT();
+  }catch(e){allT=demoT();}
+  renderT('all');
+  updateWinnersSelect();
+  updateRegFilter();
+}
+
+function demoT(){return[
+  {id:'t1',title:'FF Solo Showdown',type:'Solo',status:'live',entry_fee:0,prize_pool:10000,max_teams:64,registered_teams:58,date:'Aaj 6PM',created_at:{toDate:()=>new Date()}},
+  {id:'t2',title:'Squad Championship',type:'Squad',status:'open',entry_fee:50,prize_pool:25000,max_teams:32,registered_teams:18,date:'Kal 7PM',created_at:{toDate:()=>new Date()}},
+  {id:'t3',title:'Pro League S5',type:'Squad',status:'upcoming',entry_fee:100,prize_pool:50000,max_teams:32,registered_teams:10,date:'Mar 25',created_at:{toDate:()=>new Date()}},
+];}
+
+async function loadRegistrations(){
+  try{const snap=await db.collection('registrations').orderBy('registered_at','desc').limit(100).get();allRegs=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){allRegs=[];}
+  renderRegistrations();
+}
+
+async function loadUsers(){
+  try{const snap=await db.collection('users').orderBy('created_at','desc').limit(100).get();allUsers=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){allUsers=[];}
+  renderUsers(allUsers);
+}
+
+async function loadPayments(){
+  try{const snap=await db.collection('transactions').orderBy('created_at','desc').limit(100).get();allPay=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){allPay=[];}
+  renderPayments();
+}
+
+async function loadWithdrawals(){
+  try{const snap=await db.collection('withdrawals').orderBy('requested_at','desc').get();allWith=snap.docs.map(d=>({id:d.id,...d.data()}));}catch(e){allWith=[];}
+  renderWithdrawals();
+}
+
+async function loadPendingPayments(){
+  try{
+    const snap=await db.collection('pending_payments').where('status','==','pending').orderBy('created_at','desc').get();
+    pendingPay=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const badge=document.getElementById('pending-badge');
+    if(pendingPay.length>0){badge.textContent=pendingPay.length;badge.style.display='inline-block';}
+    else badge.style.display='none';
+  }catch(e){pendingPay=[];}
+  renderPendingPayments();
+}
+
+function renderPendingPayments(){
+  const containers=['dash-pp','pending-payments-list'];
+  const html=pendingPay.length?pendingPay.map(p=>`
+    <div class="pp-card">
+      <div class="pp-info">
+        <div class="pp-name">${p.user_name||'Player'} • UTR: <span style="color:var(--orange)">${p.utr}</span></div>
+        <div class="pp-meta">${p.note||'Payment'} • ${p.created_at?.toDate?.()?.toLocaleString('en-IN')||'—'}</div>
+      </div>
+      <div class="pp-amt">₹${p.amount}</div>
+      <div class="pp-actions">
+        <button class="ab ab-approve" onclick="approvePayment('${p.id}','${p.user_id}',${p.amount})">✅ Approve</button>
+        <button class="ab ab-reject" onclick="rejectPayment('${p.id}')">❌</button>
+      </div>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">✅</div><div style="font-size:14px;color:var(--muted);font-weight:700">Koi pending payment nahi</div></div>';
+  containers.forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=html;});
+
+  // Update stats
+  document.getElementById('pay-pending').textContent=pendingPay.length;
+  const approved=allPay.filter(p=>p.type==='credit').reduce((s,p)=>s+p.amount,0);
+  document.getElementById('pay-total').textContent='₹'+approved.toLocaleString();
+  document.getElementById('pay-approved').textContent=allPay.filter(p=>p.status!=='pending').length;
+}
+
+async function approvePayment(id, userId, amount){
+  if(!confirm('₹'+amount+' wallet mein add karein?'))return;
+  try{
+    await db.collection('pending_payments').doc(id).update({status:'approved'});
+    await db.collection('users').doc(userId).update({wallet:firebase.firestore.FieldValue.increment(amount)});
+    await db.collection('transactions').add({user_id:userId,type:'credit',amount,description:'Wallet Top-up Approved',created_at:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('✅ ₹'+amount+' wallet mein add ho gaya!');
+    loadPendingPayments();
+    loadUsers();
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+async function rejectPayment(id){
+  if(!confirm('Is payment ko reject karo?'))return;
+  try{await db.collection('pending_payments').doc(id).update({status:'rejected'});showToast('❌ Payment rejected');loadPendingPayments();}catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== DASHBOARD =====
+function loadDashboard(){
+  document.getElementById('ds-t').textContent=allT.length;
+  document.getElementById('ds-u').textContent=allUsers.length;
+  document.getElementById('ds-r').textContent=allRegs.length;
+  const rev=allRegs.reduce((s,r)=>s+(r.entry_fee||0),0);
+  document.getElementById('ds-rev').textContent='₹'+rev.toLocaleString();
+  document.getElementById('dash-t-body').innerHTML=allT.slice(0,5).map(t=>`<tr><td><strong>${t.title}</strong></td><td><span class="badge b-${t.status}">${t.status}</span></td><td>${t.registered_teams||0}/${t.max_teams}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Koi nahi</td></tr>';
+  document.getElementById('dash-r-body').innerHTML=allRegs.slice(0,5).map(r=>`<tr><td><strong>${r.user_name||'—'}</strong></td><td style="font-size:12px">${r.tournament_title||'—'}</td><td>${r.entry_fee===0?'FREE':'₹'+r.entry_fee}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Koi nahi</td></tr>';
+}
+
+// ===== TOURNAMENTS =====
+let tCurFilter='all';
+function tFilter(btn,f){document.querySelectorAll('#pg-tournaments .tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');tCurFilter=f;renderT(f);}
+
+function renderT(f='all'){
+  const list=f==='all'?allT:allT.filter(t=>t.status===f);
+  document.getElementById('t-tbody').innerHTML=list.map((t,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${t.title}</strong></td>
+      <td>${t.type}</td>
+      <td style="color:var(--yellow);font-weight:800">₹${(t.prize_pool||0).toLocaleString()}</td>
+      <td>${t.entry_fee===0?'<span style="color:var(--green);font-weight:800">FREE</span>':'₹'+t.entry_fee}</td>
+      <td>${t.registered_teams||0}/${t.max_teams}</td>
+      <td style="color:var(--muted);font-size:12px">${t.date||'—'}</td>
+      <td><span class="badge b-${t.status}">${t.status}</span></td>
+      <td><button class="ab ab-edit" onclick="editT('${t.id}')">✏️</button><button class="ab ab-del" onclick="deleteT('${t.id}')">🗑️</button></td>
+    </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Koi tournament nahi</td></tr>';
+}
+
+function editT(id){
+  editingTId=id;
+  const t=allT.find(x=>x.id===id);
+  if(!t)return;
+  document.getElementById('e-status').value=t.status||'upcoming';
+  document.getElementById('e-roomid').value=t.room_id||'';
+  document.getElementById('e-roompass').value=t.room_pass||'';
+  document.getElementById('edit-modal').classList.add('show');
+}
+
+async function saveEdit(){
+  const data={status:document.getElementById('e-status').value,room_id:document.getElementById('e-roomid').value.trim(),room_pass:document.getElementById('e-roompass').value.trim()};
+  try{await db.collection('tournaments').doc(editingTId).update(data);showToast('✅ Tournament update ho gaya!');closeModalById('edit-modal');loadTournaments();}
+  catch(e){showToast('❌ '+e.message);}
+}
+
+async function deleteT(id){
+  if(!confirm('Is tournament ko delete karo? Wapas nahi aayega.'))return;
+  try{await db.collection('tournaments').doc(id).delete();showToast('🗑️ Tournament delete ho gaya');loadTournaments();}
+  catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== CREATE =====
+async function createTournament(){
+  const title=document.getElementById('c-title').value.trim();
+  const type=document.getElementById('c-type').value;
+  const status=document.getElementById('c-status').value;
+  const prize=parseInt(document.getElementById('c-prize').value)||0;
+  const fee=parseInt(document.getElementById('c-fee').value)||0;
+  const maxT=parseInt(document.getElementById('c-maxteams').value)||32;
+  const dateVal=document.getElementById('c-date').value;
+  const dist=document.getElementById('c-dist').value;
+  const roomId=document.getElementById('c-roomid').value.trim();
+  const roomPass=document.getElementById('c-roompass').value.trim();
+  const rules=document.getElementById('c-rules').value.trim();
+  const kill=parseInt(document.getElementById('c-kill').value)||0;
+  if(!title||!prize||!maxT||!dateVal){showToast('⚠️ Sab required fields bharo');return;}
+  const dateObj=new Date(dateVal);
+  const dateStr=dateObj.toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  try{
+    await db.collection('tournaments').add({title,type,status,prize_pool:prize,entry_fee:fee,max_teams:maxT,registered_teams:0,date:dateStr,date_raw:dateVal,prize_distribution:dist,room_id:roomId,room_pass:roomPass,rules,kill_prize:kill,created_at:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('✅ Tournament ban gaya!');
+    ['c-title','c-prize','c-fee','c-maxteams','c-date','c-roomid','c-roompass','c-rules','c-kill'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('c-fee').value='0';
+    document.getElementById('c-kill').value='0';
+    loadTournaments();
+    showPage('tournaments',null);
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== REGISTRATIONS =====
+function updateRegFilter(){
+  const sel=document.getElementById('reg-filter-t');
+  sel.innerHTML='<option value="">Sab Tournaments</option>';
+  allT.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;sel.appendChild(o);});
+}
+
+function renderRegistrations(list){
+  const regs=list||allRegs;
+  document.getElementById('reg-tbody').innerHTML=regs.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${r.team_name||'—'}</strong></td>
+      <td>${r.user_name||'—'}</td>
+      <td style="color:var(--blue);font-family:monospace;font-size:12px">${r.ff_uid||'—'}</td>
+      <td style="font-size:12px">${r.tournament_title||'—'}</td>
+      <td>${r.type||'—'}</td>
+      <td>${r.entry_fee===0?'<span style="color:var(--green)">FREE</span>':'₹'+r.entry_fee}</td>
+      <td><span class="badge b-confirmed">Confirmed</span></td>
+      <td><button class="ab ab-del" onclick="removeReg('${r.id}')">🗑️</button></td>
+    </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Koi registration nahi</td></tr>';
+}
+
+function searchRegs(){
+  const q=document.getElementById('reg-search').value.toLowerCase();
+  renderRegistrations(allRegs.filter(r=>r.team_name?.toLowerCase().includes(q)||r.user_name?.toLowerCase().includes(q)||r.ff_uid?.toLowerCase().includes(q)));
+}
+
+async function removeReg(id){
+  if(!confirm('Is registration ko remove karo?'))return;
+  try{await db.collection('registrations').doc(id).delete();showToast('✅ Registration removed');loadRegistrations();}
+  catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== USERS =====
+function renderUsers(list){
+  document.getElementById('user-tbody').innerHTML=list.map((u,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${u.name||'—'}</strong></td>
+      <td style="font-size:12px">${u.email||'—'}</td>
+      <td>${u.phone||'—'}</td>
+      <td style="color:var(--blue);font-family:monospace;font-size:12px">${u.ffid||'—'}</td>
+      <td style="color:var(--yellow);font-weight:800">₹${u.wallet||0}</td>
+      <td>${u.tournaments_joined||0}</td>
+      <td><button class="ab ab-view" onclick="viewUser('${u.id}')">👁️ View</button></td>
+    </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">Koi user nahi</td></tr>';
+}
+
+function searchUsers(){
+  const q=document.getElementById('user-search').value.toLowerCase();
+  renderUsers(allUsers.filter(u=>u.name?.toLowerCase().includes(q)||u.email?.toLowerCase().includes(q)||u.ffid?.toLowerCase().includes(q)));
+}
+
+function viewUser(id){
+  editingUId=id;
+  const u=allUsers.find(x=>x.id===id);
+  if(!u)return;
+  document.getElementById('um-title').textContent=u.name||'User';
+  document.getElementById('um-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--card2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">EMAIL</div><div style="font-weight:800">${u.email||'—'}</div></div>
+      <div style="background:var(--card2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">PHONE</div><div style="font-weight:800">${u.phone||'—'}</div></div>
+      <div style="background:var(--card2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">FF UID</div><div style="font-weight:800;color:var(--blue)">${u.ffid||'—'}</div></div>
+      <div style="background:var(--card2);border-radius:10px;padding:12px"><div style="font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">WALLET</div><div style="font-weight:800;font-family:'Baloo 2',cursive;font-size:20px;color:var(--yellow)">₹${u.wallet||0}</div></div>
+    </div>`;
+  document.getElementById('user-modal').classList.add('show');
+}
+
+async function adjustWallet(){
+  const amt=parseInt(document.getElementById('um-amt').value);
+  if(!amt||isNaN(amt)){showToast('⚠️ Amount daalo');return;}
+  try{
+    await db.collection('users').doc(editingUId).update({wallet:firebase.firestore.FieldValue.increment(amt)});
+    await db.collection('transactions').add({user_id:editingUId,type:amt>0?'credit':'debit',amount:Math.abs(amt),description:'Admin Adjustment',created_at:firebase.firestore.FieldValue.serverTimestamp()});
+    showToast('✅ Wallet updated by ₹'+amt);
+    closeModalById('user-modal');
+    loadUsers();
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== PAYMENTS =====
+function renderPayments(){
+  document.getElementById('pay-tbody').innerHTML=allPay.map((p,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td style="font-size:12px">${p.user_id?.slice(0,10)||'—'}</td>
+      <td><span class="badge ${p.type==='credit'?'b-open':'b-live'}">${p.type}</span></td>
+      <td style="font-weight:800;color:${p.type==='credit'?'var(--green)':'var(--red)'}">${p.type==='credit'?'+':'-'}₹${p.amount}</td>
+      <td style="font-size:12px;max-width:200px">${p.description||'—'}</td>
+      <td style="font-size:12px;color:var(--muted)">${p.created_at?.toDate?.()?.toLocaleString('en-IN')||'—'}</td>
+    </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">Koi transaction nahi</td></tr>';
+}
+
+// ===== WITHDRAWALS =====
+function renderWithdrawals(){
+  document.getElementById('w-tbody').innerHTML=allWith.map((w,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td style="font-size:12px">${w.user_id?.slice(0,10)||'—'}</td>
+      <td style="color:var(--blue)">${w.upi}</td>
+      <td style="color:var(--yellow);font-weight:800">₹${w.amount}</td>
+      <td><span class="badge ${w.status==='pending'?'b-pending':w.status==='approved'?'b-approved':'b-ended'}">${w.status}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${w.requested_at?.toDate?.()?.toLocaleString('en-IN')||'—'}</td>
+      <td>${w.status==='pending'?`<button class="ab ab-approve" onclick="approveW('${w.id}')">✅</button><button class="ab ab-reject" onclick="rejectW('${w.id}')">❌</button>`:'—'}</td>
+    </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">Koi withdrawal nahi</td></tr>';
+}
+
+async function approveW(id){
+  if(!confirm('Withdrawal approve karo?'))return;
+  try{await db.collection('withdrawals').doc(id).update({status:'approved'});showToast('✅ Withdrawal approved! UPI se transfer karo.');loadWithdrawals();}
+  catch(e){showToast('❌ '+e.message);}
+}
+
+async function rejectW(id){
+  const w=allWith.find(x=>x.id===id);
+  if(!confirm('Reject karo & ₹'+w?.amount+' refund karo?'))return;
+  try{
+    await db.collection('withdrawals').doc(id).update({status:'rejected'});
+    if(w?.user_id)await db.collection('users').doc(w.user_id).update({wallet:firebase.firestore.FieldValue.increment(w.amount)});
+    showToast('✅ Rejected & refunded');loadWithdrawals();loadUsers();
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== WINNERS =====
+function updateWinnersSelect(){
+  const sel=document.getElementById('w-tournament');
+  sel.innerHTML='<option value="">Select...</option>';
+  allT.forEach(t=>{const o=document.createElement('option');o.value=t.id;o.textContent=t.title;sel.appendChild(o);});
+}
+
+async function declareWinner(){
+  const tid=document.getElementById('w-tournament').value;
+  const first=document.getElementById('w-1st').value.trim();
+  const second=document.getElementById('w-2nd').value.trim();
+  const third=document.getElementById('w-3rd').value.trim();
+  const uid=document.getElementById('w-uid1').value.trim();
+  const amt=parseInt(document.getElementById('w-prize-amt').value)||0;
+  if(!tid||!first||!amt){showToast('⚠️ Required fields bharo');return;}
+  try{
+    const t=allT.find(x=>x.id===tid);
+    await db.collection('winners').add({tournament_id:tid,tournament_title:t?.title||'',first_place:first,second_place:second,third_place:third,winner_ff_uid:uid,prize_amount:amt,declared_at:firebase.firestore.FieldValue.serverTimestamp()});
+    await db.collection('tournaments').doc(tid).update({status:'ended'});
+    showToast('🏆 Winner declare ho gaya!');
+    loadTournaments();
+  }catch(e){showToast('❌ '+e.message);}
+}
+
+// ===== NAV =====
+const pageTitles={dashboard:'Dashboard',tournaments:'Tournaments',create:'Tournament Banao',registrations:'Registrations',payments:'Payments & Pending',users:'Users',withdrawals:'Withdrawals',winners:'Winners',settings:'Settings'};
+
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+name).classList.add('active');
+  document.getElementById('page-title').textContent=pageTitles[name]||name;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  if(name==='payments'){loadPendingPayments();loadPayments();}
+  if(name==='withdrawals')loadWithdrawals();
+  if(name==='users')loadUsers();
+}
+
+function refreshAll(){loadAll();showToast('🔄 Data refresh ho gaya!');}
+function closeModal(e,id){if(e.target===document.getElementById(id))document.getElementById(id).classList.remove('show');}
+function closeModalById(id){document.g
+<script>
+// ===== ADMIN SECURITY =====
+
+// 1. Disable right click
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 2. Disable DevTools shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key==='F12' ||
+      (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) ||
+      (e.ctrlKey && e.key==='U')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// 3. DevTools detection - auto logout
+(function(){
+  setInterval(()=>{
+    if(window.outerWidth - window.innerWidth > 160 ||
+       window.outerHeight - window.innerHeight > 160){
+      auth.signOut();
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#07070D;color:#E8001C;font-family:monospace;font-size:18px;text-align:center">⚠️ Security Violation<br><span style="font-size:14px;color:#555;margin-top:10px;display:block">Admin session terminated.</span></div>';
+    }
+  }, 1000);
+})();
+
+// Auto logout removed
+
+// 5. Log all admin actions
+async function logAdminAction(action, details=''){
+  try{
+    await db.collection('admin_logs').add({
+      admin: auth.currentUser?.email,
+      action, details,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  }catch(e){}
+}
+
+// 6. Input sanitization
+function sanitizeInput(str){
+  if(!str) return '';
+  return String(str).replace(/[<>"'&]/g, c=>({'<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','&':'&amp;'}[c]));
+}
+
+</script>
+</body>
+</html>
